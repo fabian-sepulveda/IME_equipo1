@@ -101,17 +101,64 @@ prueba_yuen_media <- pb2gen(hijos ~ region,
 cat("\n\nResultado al usar la media como estimador\n\n")
 print(prueba_media)
 
-# Propongan una pregunta de investigaciÃ³n original, que involucre la comparaciÃ³n de las medias de mÃ¡s de dos grupos 
-# independientes (mÃ¡s abajo se dan unos ejemplos). Fijando una semilla distinta a la anterior, seleccionen una
-# muestra aleatoria de hogares (400 < n < 600) y respondan la pregunta propuesta utilizando bootstrapping. Solo 
-# por ejercicio acadÃ©mico, aplique un anÃ¡lisis post-hoc con bootstrapping aunque este no sea necesario.
 
-#La pregunta de investigacion planteada es la de analizar si, en promedio, los hombres de las regiones de Atacama,
-#Metropolitana y Los Lagos trabajan la misma cantidad de horas a la semana.
 
-#Hipotesis:
-#H0: en promedio, los hombres de las regiones de Atacama, Metropolitana y de Los Lagos trabajan la misma cantidad de 
-#    horas a la semana.
-#HA: en promedio, los hombres de al menos una de las regiones estudiadas trabajan una cantidad distinta de horas 
-#    respecto a las demas regiones.
+#-------------------------------------------------------------------------------
+#PREGUNTA 2
 
+# Una universidad de Chile necesita conocer la situacion economica de los hogares a los que pertenecen 
+# sus estudiantes, esto con el fin de disponer de distintas becas que los apoyen durante su carrera. Para ello
+# realizaron estudio tomando como ejemplo en 3 regiones correspondientes al sector norte, centro y sur del país respectivamente.
+# Lo que se busca con esto es verificar si el ingreso total (variable ytotcorch) medio de los hogares es similar en
+# las regiones norte(region Coquimbo), centro(region maule) y sur (region los lagos) del pais.
+
+#Librerias
+library(dplyr)
+library(ggpubr)
+library(WRS2)
+library(tidyverse)
+set.seed(573)
+
+#Lectura de los datos desde el archivo csv entregado.
+basename <- "EP11 Datos.csv"
+file <- file.path("C:/Users/fabia/Desktop/01-2022/IME/trabajos/IME_equipo1/EP12", basename)
+datos <- read.csv2(file = file)
+
+datosRegion <- datos %>% filter(ytotcorh != "NA")
+datosRegion <- filter(datos, region %in% c("Región de Coquimbo", "Región del Maule", "Región de Los Lagos"))
+
+# Se toma una muestra de 600 personas pertenecientes a esas regiones
+tam <- 600
+muestra <- datosRegion[sample(nrow(datosRegion), tam),]
+ingresos <- muestra[["ytotcorh"]]
+regiones <- factor(muestra[["region"]])
+datos2 <- data.frame(ingresos, regiones)
+
+ingreso_Norte <- sample_n(datos2 %>% filter(regiones == "Región de Coquimbo") %>% select(ingresos),100)
+vectorNorte <- as.vector(t(ingreso_Norte))
+ingreso_Centro <- sample_n(datos2 %>% filter(regiones == "Región del Maule") %>% select(ingresos),100)
+vectorCentro <- as.vector(t(ingreso_Centro))
+ingreso_Sur <- sample_n(datos2 %>% filter(regiones == "Región de Los Lagos") %>% select(ingresos),100)
+vectorSur <- as.vector(t(ingreso_Sur))
+
+id <- 1:nrow(ingreso_Norte)
+datos_Agrupados <- data.frame(id,vectorNorte,vectorCentro,vectorSur)
+
+datos_Agrupados_largo <- datos_Agrupados %>% pivot_longer(c("vectorNorte", "vectorCentro", "vectorSur"), names_to = "region",
+                                values_to = "ingresos")
+
+datos_Agrupados_largo[["region"]] <- factor(datos_Agrupados_largo[["region"]])
+
+# Fijar nivel de significacion.
+alfa <- 0.05
+
+# Aplicar alternativa robusta para ANOVA de una via con
+# muestras correlacionadas.
+gamma <- 0.2
+
+prueba <- rmanova(y = datos_Agrupados_largo[["ingresos"]], groups = datos_Agrupados_largo[["region"]],
+                  blocks = datos_Agrupados_largo[["id"]], tr = gamma)
+
+print(prueba)
+
+#NO se si se debe aplicar post hoc aqui
