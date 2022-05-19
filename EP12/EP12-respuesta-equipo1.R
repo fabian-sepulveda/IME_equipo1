@@ -25,6 +25,7 @@ lambda <- transformTukey(tiempoA, start = -4 , end = 4, int = 0.001, plotit = TR
 tiempoATrans <- tiempoA**lambda
 tiempoBTrans <- tiempoB**lambda
 
+
 print(tiempoATrans)
 print(tiempoBTrans)
 
