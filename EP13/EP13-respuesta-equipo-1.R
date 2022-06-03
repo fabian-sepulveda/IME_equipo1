@@ -74,10 +74,18 @@ modelo_ajustado <- lm(formula_m, data = muestra)
 #Se realiza la selección hacia adelante usando la función step, ingresando como modelo nulo al modelo de regresión
 #lineal simple creado en la parte 5 del trabajo, junto con el modelo ajustado creado anteriormente.
 adelante <- step(modelo, scope = list(upper = modelo_ajustado), direction = "forward", trace = 0)
-print(summary(adelante))
 
 #Luego de realizar la selección hacia adelante el nuevo modelo de regresión lineal múltiple incluye las siguientes 
 #variables: Waist.Girth, Knee.Girth, Height, Forearm.Girth, Thight.Girth y Knees.diameter.
+
+#Para dejar el modelo con solo 5 variables predictoras se usará la función drop1 para ver cuál de éstas tiene
+#el menor impacto en el AIC para así eliminarla.
+prueba <- drop1(adelante, scope = adelante);
+print(prueba)
+
+#Usando el resultado de la función drop1 se decide eliminar la variable Knee.Girth.
+adelante <- update(adelante, . ~ . - Knee.Girth)
+print(summary(adelante))
 
 # Parte 7
 # Evaluar los modelos y “arreglarlos” en caso de que tengan algún problema con las condiciones que deben cumplir.
@@ -93,7 +101,7 @@ prueba1 <- durbinWatsonTest(adelante)
 #Se imprime el resultado de la prueba.
 print(prueba1)
 
-#Del resultado anterior se obtiene un p-valor igual a 0.492, el cual es mayor al nivel de significación, por lo que 
+#Del resultado anterior se obtiene un p-valor igual a 0.332, el cual es mayor al nivel de significación, por lo que 
 #se falla al rechazar la hipótesis nula, concluyendo con un 95% de confianza que los residuos son independientes.
 
 # 2. Distribución normal de los residuos:
@@ -102,7 +110,7 @@ prueba2 <- shapiro.test(adelante$residuals)
 #Se imprime el resultado de la prueba.
 print(prueba2)
 
-#De la prueba se obtiene un p-valor igual a 0.178, el cual es mayor al nivel de significación, por lo que se falla
+#De la prueba se obtiene un p-valor igual a 0.5251, el cual es mayor al nivel de significación, por lo que se falla
 #al rechazar la hipótesis nula, pudiendo concluir con 95% de confianza que los residuos si siguen una distribución 
 #cercana a la normal.
 
@@ -112,7 +120,7 @@ prueba3 <- ncvTest(adelante)
 #Se imprime el resultado
 print(prueba3)
 
-#En la prueba se obtiene un p-valor igual a 0.22631, el cual es mayor al nivel de significación, por lo que se falla 
+#En la prueba se obtiene un p-valor igual a 0.21369, el cual es mayor al nivel de significación, por lo que se falla 
 #al rechazar la hipótesis nula, concluyendo con un 95% de confianza que las varianzas de los residuos son iguales, 
 #cumpliéndose el principio de homocedasticidad.
 
@@ -133,16 +141,27 @@ print(1 / vifs)
 #ninguna variable, por lo que se confirma que se cumple la multicolinealidad.
 
 # 5. Validación cruzada:
-
-modelo <- train(adelante$terms, data = muestra, method = "lm", trControl = trainControl(method = "cv", number = 5))
-print(modelo)
+#Este punto se revisa en el siguiente apartado (Parte 8).
 
 # 6. Tamaño de la muestra:
 
-#Ta bien.
+#Basándose en lo explicado en la lectura, se debe tener al menos entre 10 a 15 observaciones por cada predictor.
+#En este caso se tienen 50 observaciones y 5 predictores, por lo que el tamaño de la muestra es correcto.
 
 # Parte 8
 
+#Para este punto se realizó una validación cruzada del modelo de 5 pliegues, usando las observaciones usadas en el
+#entrenamiento.
+validacion1 <- train(adelante$terms, data = muestra, method = "lm", trControl = trainControl(method = "cv", number = 5))
+#Se imprime el resultado por consola.
+print(validacion1)
+
+#Para comprobar que el modelo funciona fuera de los datos de entrenamiento se realiza otra validación cruzada de 5
+#pliegues, pero con observaciones no usadas anteriormente.
 muestra2 <- muestra_larga[51:100, ]
-modelo <- train(adelante$terms, data = muestra2, method = "lm", trControl = trainControl(method = "cv", number = 5))
-print(modelo)
+validacion2 <- train(adelante$terms, data = muestra2, method = "lm", trControl = trainControl(method = "cv", number = 5))
+print(validacion2)
+
+#El error cuadrático medio obtenido en la validación con los datos de entrenamiento es de 2.477, minetras que el 
+#error cuadrático medio obtenido con los datos de prueba es de 3.006. Ambos valores son muy cercanos, por lo que el 
+#poder predictivo del modelo es correcto.
