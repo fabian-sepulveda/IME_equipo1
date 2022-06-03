@@ -19,7 +19,8 @@ datos <- read.csv2(file = file)
 
 #Ya que la semilla es impar se filtran las observaciones correspondientes a hombres.
 hombres <- datos %>% filter(Gender == 1)
-#Se obtiene una muestra de 50 observaciones.
+#Se obtiene una muestra de 100 observaciones, de las cuales se usarán las primeras 50 para entrenar el modelo y las 
+#otras 50 para pruebas de validación cruzada.
 muestra_larga <- sample_n(hombres, 100)
 muestra <- muestra_larga[1:50, ]
 
@@ -37,18 +38,17 @@ variables_aleatorias <- sample(variables, 8, replace = FALSE)
 # Peso, justificando bien esta selección.
 
 #De las variables restantes (que no fueron seleccionadas en la selección al azar) se seleccionó la variable
-#Hip.Girth, la cual representa el grosor del cuerpo a la altura de la cadera. Como equipo decidimos seleccionar
+#Waist.Girth, la cual representa el grosor del cuerpo a la altura de la cintura. Como equipo decidimos seleccionar
 #esta variable ya que consideramos que la mayor parte del peso de una persona se concentra en la zona abdominal,
 #y que una persona más pesada tendría un mayor grosor en esta zona, y dado que el grosor a la altura del ombligo
-#(Navel.Girth) y el grosor a la altura de la cintura (Waist.Girth) ya fueron seleccionadas de manera aleatoria
-#seleccionamos el grosor a la altura de la cadera (Hip.Girth).
+#(Navel.Girth) ya fue seleccionada de manera aleatoria, seleccionamos el grosor a la altura de la cintura (Waist.Girth).
 
 # Parte 5
 # Usando el entorno R, construir un modelo de regresión lineal simple con el predictor seleccionado en el
 # paso anterior.
 
-#Se construye el modelo de regresión lineal simple usando la función lm y la variable Hip.Girth como predictor.
-modelo <- lm(Weight ~ Hip.Girth, data = muestra)
+#Se construye el modelo de regresión lineal simple usando la función lm y la variable Waist.Girth como predictor.
+modelo <- lm(Weight ~ Waist.Girth, data = muestra)
 print(summary(modelo))
 
 # Parte 6
@@ -61,8 +61,8 @@ print(summary(modelo))
 #necesario crear un modelo ajustado que contenga una fórmula que incluya todas las variables que se seleccionaron
 #aleatoriamente, junto con la variable seleccionada por el equipo.
 
-#Para crear el modelo ajustado se agrega la variable Hip.Girth a la lista de las variables aleatorias.
-variables_aleatorias <- c(variables_aleatorias, "Hip.Girth")
+#Para crear el modelo ajustado se agrega la variable Waist.Girth a la lista de las variables aleatorias.
+variables_aleatorias <- c(variables_aleatorias, "Waist.Girth")
 #Se crea un string que sigue la estructura de una fórmula.
 fstr <- paste("Weight", paste(variables_aleatorias, collapse = " + "), sep = " ~ ")
 #Se transforma el string en una fórmula, para ser usado en el modelo ajustado.
@@ -77,7 +77,7 @@ adelante <- step(modelo, scope = list(upper = modelo_ajustado), direction = "for
 print(summary(adelante))
 
 #Luego de realizar la selección hacia adelante el nuevo modelo de regresión lineal múltiple incluye las siguientes 
-#variables: Hip.Girth, Shoulder.Girth, Ankle.Minimum.Girth, Waist.Girth y Wrist.Minimum.Girth.
+#variables: Waist.Girth, Knee.Girth, Height, Forearm.Girth, Thight.Girth y Knees.diameter.
 
 # Parte 7
 # Evaluar los modelos y “arreglarlos” en caso de que tengan algún problema con las condiciones que deben cumplir.
@@ -93,7 +93,7 @@ prueba1 <- durbinWatsonTest(adelante)
 #Se imprime el resultado de la prueba.
 print(prueba1)
 
-#Del resultado anterior se obtiene un p-valor igual a 0.704, el cual es mayor al nivel de significación, por lo que 
+#Del resultado anterior se obtiene un p-valor igual a 0.492, el cual es mayor al nivel de significación, por lo que 
 #se falla al rechazar la hipótesis nula, concluyendo con un 95% de confianza que los residuos son independientes.
 
 # 2. Distribución normal de los residuos:
@@ -102,7 +102,7 @@ prueba2 <- shapiro.test(adelante$residuals)
 #Se imprime el resultado de la prueba.
 print(prueba2)
 
-#De la prueba se obtiene un p-valor igual a 0.7627, el cual es mayor al nivel de significación, por lo que se falla
+#De la prueba se obtiene un p-valor igual a 0.178, el cual es mayor al nivel de significación, por lo que se falla
 #al rechazar la hipótesis nula, pudiendo concluir con 95% de confianza que los residuos si siguen una distribución 
 #cercana a la normal.
 
@@ -112,16 +112,25 @@ prueba3 <- ncvTest(adelante)
 #Se imprime el resultado
 print(prueba3)
 
-#En la prueba se obtiene un p-valor igual a 0.20257, el cual es mayor al nivel de significación, por lo que se falla 
+#En la prueba se obtiene un p-valor igual a 0.22631, el cual es mayor al nivel de significación, por lo que se falla 
 #al rechazar la hipótesis nula, concluyendo con un 95% de confianza que las varianzas de los residuos son iguales, 
-#cumpliéndose el principio de homcedasticidad.
+#cumpliéndose el principio de homocedasticidad.
 
 # 4. Multicolinealidad:
 #Para verificar la multicolinealidad se empleará el factor de inflación de varianza (VIF), que se calcula usando
 #la función vif, junto con el estadístico tolerancia (1/VIF).
 vifs <- vif(adelante)
+#Se imprime por consola el VIF de cada variable.
 print(vifs)
+
+#Según la información entregada por la lectura, el VIF de una variable no debe ser mayor o igual a 10, cosa que no 
+#ocurre en las variables presentes en el modelo, ya que el VIF de mayor valor corresponde a 3.642660.
+
+#Se imprimen por consola el estadístico tolerancia.
 print(1 / vifs)
+
+#También basándose en la información de la lectura, este estadístico no debe ser menor a 0.2, lo que no ocurre en 
+#ninguna variable, por lo que se confirma que se cumple la multicolinealidad.
 
 # 5. Validación cruzada:
 
