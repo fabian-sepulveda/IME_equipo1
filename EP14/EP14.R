@@ -2,7 +2,7 @@ library(dplyr)
 library(car)
 library(mlogit)
 library(pROC)
-#Funciones
+#-----------------Funciones-----------------#
 #Función que según el IMC indica si esta sobrepeso o no. 
 determinarEN <- function(i, dato){
   if(dato[i] >= 25){
@@ -12,6 +12,8 @@ determinarEN <- function(i, dato){
     return (0)
   }
 }
+
+#-----------------Desarrollo-----------------#
 
 #Se lee la información desde el archivo csv entregado.
 basename <- "EP13 Datos.csv"
@@ -42,7 +44,9 @@ hombres.nosobrepeso <- sample_n(datos%>%filter(Gender == 1 & EN == 0), 60)
 
 #Se define las muestras de entrenamiento y prueba
 muestra.entrenamiento <- rbind(hombres.nosobrepeso[1:40, ],hombres.sobrepeso[1:40, ])
+muestra.entrenamiento <- sample_n(muestra.entrenamiento, nrow(muestra.entrenamiento))
 muestra.prueba <- rbind(hombres.sobrepeso[41:60, ], hombres.nosobrepeso[41:60, ])
+muestra.prueba <- sample_n(muestra.prueba, nrow(muestra.prueba))
 
 #Recordando las 8 variables del trabajo anterior
 
@@ -67,6 +71,7 @@ fstr <- paste("EN", paste(variables, collapse = " + "), sep = " ~ ")
 formula_m <- formula(fstr)
 
 modelo.completo <- glm(formula_m, family = binomial(link = "logit"), data = muestra.entrenamiento)
+
 
 nuevo.modelo <- step(modelo, scope = list(lower = modelo, upper = modelo.completo), direction = "forward", trace = 0)
 print(summary(nuevo.modelo))
@@ -140,7 +145,7 @@ cat (" Residuales con DFBeta sobre 1\n")
 cat (" - - - - - - - - - - -- - - - - - - - - - - - - - - - - -\n")
 print(rownames(muestra.entrenamiento[sospechosos4 , ]))
 
-# Detalle de las observaciones posiblemente atí picas .
+# Detalle de las observaciones posiblemente atípicas .
 sospechosos <- c(sospechosos1, sospechosos2, sospechosos3, sospechosos4)
 sospechosos <- sort (unique(sospechosos))
 cat ("\n\n")
@@ -149,6 +154,7 @@ cat (" - - - - - - - - - - -- - - - - -\n")
 print(muestra.entrenamiento[sospechosos, ])
 cat("\n\n")
 print(output[sospechosos , ])
+
 
 #Verificar Condiciones
 
@@ -170,7 +176,10 @@ cat (" Verificación de independencia de los residuos \n")
 cat (" - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - -- - - - - -\n")
 print(durbinWatsonTest(nuevo.modelo) )
 
+
 #Evaluar poder predictivo
+
+
 prob_n <- predict(nuevo.modelo, muestra.entrenamiento, type = "response")
 
 preds_n <- sapply(prob_n, function(p) ifelse(p >= umbral, "1", "0"))
