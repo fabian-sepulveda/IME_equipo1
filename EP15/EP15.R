@@ -1,11 +1,12 @@
 library(dplyr)
 library(leaps)
 library(caret)
+library(pROC)
 set.seed(5888)
 
 #Se lee la información desde el archivo csv entregado.
 basename <- "EP13 Datos.csv"
-file <- file.path("C:/Users/adolf/Desktop/Cosas/IME/IME_equipo1/EP14", basename)
+file <- file.path("C:/Users/fabia/Desktop/01-2022/IME/IME_equipo1/EP14", basename)
 datos <- read.csv2(file = file)
 
 altura <- datos$Height / 100
@@ -25,7 +26,7 @@ EN <- sapply(1:length(IMC), determinarEN, IMC)
 datos <- cbind(datos, IMC, EN)
 
 muestra <- rbind(sample_n(datos%>%filter(EN == 1), 50), sample_n(datos%>%filter(EN == 0), 50))
-
+muestra <- sample_n(muestra, nrow(muestra))
 variables <- colnames(muestra)
 variables <- variables[-c(23, 26, 27)]
 
@@ -46,12 +47,32 @@ modelo1 <- train(formula, data = muestra, method = "lm", trControl = train.contr
 
 set.seed(3473)
 
-drop <- names(datos) %in% c("Weight", "Height", "EN", "IMC")
-x <- datos[, !drop]
-y <- datos[, 23]
-size <- c(10:20)
+drop <- names(muestra) %in% c("Weight", "Height", "EN", "IMC")
+x2 <- muestra[, !drop]
+y2 <- muestra[, 23]
 
 ctrl <- rfeControl(functions = lmFuncs, method = "repeatedcv", repeats = 5, verbose = FALSE)
-modelo2 <- rfe(x = x, y = y, sizes = size, rfeControl = ctrl)
-print(modelo2)
+modelo2 <- rfe(x = x2, y = y2, sizes = c(10:20),data = muestra, rfeControl = ctrl)
+modelo2 <- modelo2$fit
+print(summary(modelo2))
 
+set.seed(8091)
+
+drop <- names(muestra) %in% c("Weight", "Height", "IMC")
+x3 <- muestra[, !drop]
+y3 <- muestra[, 27]
+
+ctrl3 <- rfeControl(functions = lrFuncs, method = "LOOCV", verbose = FALSE)
+modelo3 <- rfe(x = x3, y = y3, sizes = c(2:6), rfeControl = ctrl3)
+modelo3 <- modelo3$fit
+print(summary(modelo3))
+
+
+umbral <- 0.5
+prob_3 <- predict(modelo3, muestra, type = "response")
+
+preds_3 <- sapply(prob_3, function(p) ifelse(p >= umbral, "1", "0"))
+preds_3 <- factor(preds_3, levels = levels(datos[["EN"]]))
+
+ROC_3 <- roc(muestra[["EN"]], prob_3)
+plot(ROC_3)
